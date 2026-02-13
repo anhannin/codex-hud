@@ -39,3 +39,6 @@ codex --version
 grep -n "status_line_command" ~/.codex/config.toml
 cd codex-hud/Codex-HUD && node dist/index.js --status-line --once --no-clear
 ```
+
+## Support
+- Bug reports: `https://github.com/anhannin/codex-hud/issues`

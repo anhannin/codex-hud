@@ -80,6 +80,9 @@ HUD • g5.3c • Usage ██░░░░░░░░ 25% (1h 30m / 5h) | █�
 - Install succeeded but HUD not shown: restart sessions launched before install
 - `tmux: command not found`: tmux mode is optional, not required
 
+## Support
+- Bug reports: `https://github.com/anhannin/codex-hud/issues`
+
 ## Project Layout
 - `src/`: HUD parser and renderer sources
 - `dist/`: Build output

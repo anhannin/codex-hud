@@ -2,3 +2,5 @@ node_modules/
 dist/
 _upstream/
 .DS_Store
+AGENT.MD
+AGENTS.md

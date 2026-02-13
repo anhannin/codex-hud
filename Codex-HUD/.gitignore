@@ -4,3 +4,9 @@ _upstream/
 .DS_Store
 AGENT.MD
 AGENTS.md
+*.log
+*.tmp
+*.swp
+.env
+.env.*
+1.png

@@ -1,0 +1,6 @@
+# Keep this repo focused on Codex-HUD files.
+*
+!.gitignore
+!README.md
+!Codex-HUD/
+!Codex-HUD/**

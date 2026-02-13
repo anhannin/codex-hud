@@ -2,6 +2,8 @@
 
 HUD harness that displays Claude-HUD style usage and status information in the Codex TUI status line.
 
+![Codex HUD screenshot](docs/assets/hud-example.png)
+
 ## What It Does
 - Parses Codex rollout logs (`~/.codex/sessions/**/rollout-*.jsonl`)
 - Shows current model, project, and Git branch state

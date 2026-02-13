@@ -38,7 +38,9 @@ if [[ ! -f "$CONFIG_PATH" ]]; then
 fi
 
 STATUS_LINE='status_line = []'
-STATUS_CMD="status_line_command = \"cd ${REPO_DIR} && node dist/index.js --status-line --once --no-clear\""
+ESCAPED_REPO="${REPO_DIR//\\/\\\\}"
+ESCAPED_REPO="${ESCAPED_REPO//\"/\\\"}"
+STATUS_CMD="status_line_command = \"cd \\\"${ESCAPED_REPO}\\\" && node dist/index.js --status-line --once --no-clear\""
 
 TMP_FILE="$(mktemp)"
 trap 'rm -f "$TMP_FILE"' EXIT

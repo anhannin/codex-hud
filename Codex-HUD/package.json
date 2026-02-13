@@ -1,0 +1,29 @@
+{
+  "name": "codex-hud",
+  "version": "0.1.0",
+  "description": "Real-time HUD harness for Codex sessions using rollout JSONL",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "codex-hud": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "npm run build && node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "codex",
+    "hud",
+    "status",
+    "cli"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.0"
+  }
+}

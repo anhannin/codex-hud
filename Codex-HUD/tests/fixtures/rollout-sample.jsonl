@@ -1,0 +1,8 @@
+{"timestamp":"2026-02-13T10:00:00Z","type":"session_meta","payload":{"id":"thread-1","timestamp":"2026-02-13T10:00:00Z","cwd":"/tmp/demo","originator":"codex","cli_version":"0.1.0","source":"cli"}}
+{"timestamp":"2026-02-13T10:00:01Z","type":"turn_context","payload":{"turn_id":"t1","cwd":"/tmp/demo","model":"gpt-5-codex"}}
+{"timestamp":"2026-02-13T10:00:02Z","type":"event_msg","payload":{"type":"turn_started","turn_id":"t1","model_context_window":258000}}
+{"timestamp":"2026-02-13T10:00:03Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"total_tokens":64500},"last_token_usage":{"total_tokens":1000},"model_context_window":258000},"rate_limits":{"primary":{"used_percent":24.7,"window_minutes":300,"resets_at":1771009500},"secondary":{"used_percent":78.2,"window_minutes":10080,"resets_at":1771614300}}}}
+{"timestamp":"2026-02-13T10:00:04Z","type":"event_msg","payload":{"type":"exec_command_begin","call_id":"c1","turn_id":"t1","command":["npm","test"],"cwd":"/tmp/demo","parsed_cmd":[]}}
+{"timestamp":"2026-02-13T10:00:05Z","type":"event_msg","payload":{"type":"exec_command_end","call_id":"c1","turn_id":"t1","command":["npm","test"],"cwd":"/tmp/demo","parsed_cmd":[],"stdout":"","stderr":"","aggregated_output":"","exit_code":0,"duration":{"secs":1,"nanos":0},"formatted_output":"","status":"completed"}}
+{"timestamp":"2026-02-13T10:00:06Z","type":"event_msg","payload":{"type":"mcp_tool_call_begin","call_id":"m1","invocation":{"server":"filesystem","tool":"read_file"}}}
+{"timestamp":"2026-02-13T10:00:07Z","type":"event_msg","payload":{"type":"plan_update","plan":[{"status":"completed","step":"Read repository"},{"status":"in_progress","step":"Implement parser"},{"status":"pending","step":"Run tests"}]}}

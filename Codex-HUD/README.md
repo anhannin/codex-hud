@@ -87,3 +87,6 @@ HUD • g5.3c • Usage ██░░░░░░░░ 25% (1h 30m / 5h) | █�
 - `patches/`: Codex TUI patch files
 - `tests/`: Test files
 - `docs/`: Analysis and design docs
+
+## Promotion
+- Launch copy templates: `docs/promo/launch-kit.md`

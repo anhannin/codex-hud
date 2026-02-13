@@ -1,6 +1,6 @@
 # Codex HUD
 
-HUD harness that renders Claude-HUD style usage and status data in the Codex TUI status line.
+Codex HUD is an open-source status line HUD for Codex CLI, rendering Claude-HUD style usage and session status directly in the terminal.
 
 ![Codex HUD screenshot](Codex-HUD/docs/assets/hud-example.png)
 

@@ -12,10 +12,26 @@ function formatRemaining(to?: Date): string {
   const diff = to.getTime() - Date.now();
   if (diff <= 0) return '';
   const mins = Math.ceil(diff / 60000);
+  if (mins >= 24 * 60) {
+    const d = Math.floor(mins / (24 * 60));
+    const h = Math.floor((mins % (24 * 60)) / 60);
+    return h > 0 ? `${d}d ${h}h` : `${d}d`;
+  }
   if (mins < 60) return `${mins}m`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+function formatWindow(windowMinutes?: number): string {
+  if (windowMinutes === undefined || windowMinutes <= 0) return '?';
+  if (windowMinutes % (24 * 60) === 0) {
+    return `${windowMinutes / (24 * 60)}d`;
+  }
+  if (windowMinutes % 60 === 0) {
+    return `${windowMinutes / 60}h`;
+  }
+  return `${windowMinutes}m`;
 }
 
 function toolPrefix(tool: ToolActivity): string {
@@ -88,27 +104,43 @@ export function renderTmuxLine(snapshot: HudSnapshot): string {
   const project = snapshot.cwd ? snapshot.cwd.split(/[\\/]/).filter(Boolean).slice(-2).join('/') : 'no-cwd';
   const git = snapshot.gitBranch ? `${snapshot.gitBranch}${snapshot.gitDirty ? '*' : ''}` : '-';
   const turn = snapshot.turnState === 'running' ? yellow('RUN') : dim('IDLE');
+  const activeCount = snapshot.activeTools.length;
+  const toolLabel = activeCount > 0
+    ? snapshot.activeTools[snapshot.activeTools.length - 1].label
+    : dim('idle');
 
-  const parts: string[] = [
+  const line1: string[] = [
     `${bold(cyan('HUD'))}`,
     `${bold(blue(model))}`,
     `${magenta(project)}`,
-    `${yellow(` ${git}`)}`,
+    `${yellow(`git:${git}`)}`,
     `${turn}`,
+    `${bold(green('TOOL'))}:${toolLabel}`,
   ];
 
+  const line2: string[] = [];
+  if (snapshot.contextUsedPercent !== undefined) {
+    const ctx = Math.round(snapshot.contextUsedPercent);
+    line2.push(`Context ${bar(ctx)} ${percentColor(ctx)(`${ctx}%`)}`);
+  }
+
   if (snapshot.ratePrimary) {
-    const used = Math.round(snapshot.ratePrimary.usedPercent);
-    parts.push(`${bold(cyan('5H'))}:${percentColor(used)(`${used}%`)}`);
+    const p = Math.round(snapshot.ratePrimary.usedPercent);
+    const pRemaining = formatRemaining(snapshot.ratePrimary.resetsAt) || '--';
+    const pWindow = formatWindow(snapshot.ratePrimary.windowMinutes);
+    let usage = `Usage ${bar(p)} ${percentColor(p)(`${p}%`)} (${pRemaining} / ${pWindow})`;
+    if (snapshot.rateSecondary) {
+      const s = Math.round(snapshot.rateSecondary.usedPercent);
+      const sRemaining = formatRemaining(snapshot.rateSecondary.resetsAt) || '--';
+      const sWindow = formatWindow(snapshot.rateSecondary.windowMinutes);
+      usage += ` ${dim('|')} ${bar(s)} ${percentColor(s)(`${s}%`)} (${sRemaining} / ${sWindow})`;
+    }
+    line2.push(usage);
   }
 
-  const activeCount = snapshot.activeTools.length;
-  if (activeCount > 0) {
-    const head = snapshot.activeTools[snapshot.activeTools.length - 1];
-    parts.push(`${bold(green('TOOL'))}:${head.label}`);
-  } else {
-    parts.push(`${bold(green('TOOL'))}:${dim('idle')}`);
+  const first = line1.join(` ${dim('•')} `);
+  if (line2.length === 0) {
+    return first;
   }
-
-  return parts.join(` ${dim('•')} `);
+  return `${first}\n${line2.join(` ${dim('│')} `)}`;
 }

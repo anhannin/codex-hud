@@ -20,7 +20,7 @@ Usage: configure-codex-statusline.sh [--config <path>] [--repo-dir <path>]
 
 Updates Codex config.toml with:
   [tui]
-  status_line = ["model-name", "git-branch"]
+  status_line = []
   status_line_command = "cd <repo> && node dist/index.js --status-line --once --no-clear"
 USAGE
       exit 0
@@ -37,7 +37,7 @@ if [[ ! -f "$CONFIG_PATH" ]]; then
   : > "$CONFIG_PATH"
 fi
 
-STATUS_LINE='status_line = ["model-name", "git-branch"]'
+STATUS_LINE='status_line = []'
 STATUS_CMD="status_line_command = \"cd ${REPO_DIR} && node dist/index.js --status-line --once --no-clear\""
 
 TMP_FILE="$(mktemp)"

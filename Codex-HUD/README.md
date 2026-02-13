@@ -111,7 +111,7 @@ Manual equivalent:
 
 ```toml
 [tui]
-status_line = ["model-name", "git-branch"]
+status_line = []
 status_line_command = "cd /home/avees/Codex-HUD && node dist/index.js --status-line --once --no-clear"
 ```
 

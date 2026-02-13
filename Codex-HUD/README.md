@@ -1,12 +1,12 @@
 # Codex HUD
 
-Codex TUI 하단에 Claude-HUD 스타일 사용량/상태 정보를 표시하는 HUD 하네스입니다.
+HUD harness that displays Claude-HUD style usage and status information in the Codex TUI status line.
 
 ## What It Does
-- Codex rollout 로그(`~/.codex/sessions/**/rollout-*.jsonl`)를 파싱
-- 현재 모델/프로젝트/깃 브랜치 상태 표시
-- 5시간/7일 사용량 바와 남은 시간 표시
-- 모델이 `spark`면 Spark limit, 아니면 기본 limit 자동 선택
+- Parses Codex rollout logs (`~/.codex/sessions/**/rollout-*.jsonl`)
+- Shows current model, project, and Git branch state
+- Displays 5-hour and 7-day usage bars with remaining reset time
+- Uses Spark limits when the active model is `spark`, otherwise uses default limits
 
 ## Quick Start
 ```bash
@@ -16,27 +16,27 @@ cd codex-hud
 ```
 
 ## Supported Environment
-- Target: Codex CLI Linux 환경용 HUD 하네스
+- Target: HUD harness for Codex CLI on Linux
 - OS: Linux (Ubuntu/Debian, Fedora/RHEL, Arch, openSUSE)
 - Shell: bash, zsh
 - Runtime: Node.js + npm, Rust toolchain (`cargo`)
 - Package managers auto-detected by installer: `apt-get`, `dnf`, `pacman`, `zypper`
-- Not primary target: Windows/macOS native 환경
+- Not a primary target: native Windows/macOS
 
-`install.sh`가 자동으로 수행하는 작업:
-- HUD 빌드 (`npm ci`, `npm run build`)
-- Codex 소스 패치 적용 및 patched `codex` 빌드
-- `~/.local/bin/codex` 배치
-- `~/.codex/config.toml`에 `status_line_command` 설정
+`install.sh` automatically:
+- Builds the HUD (`npm ci`, `npm run build`)
+- Applies the Codex source patch and builds patched `codex`
+- Installs patched binary to `~/.local/bin/codex`
+- Configures `~/.codex/config.toml` with `status_line_command`
 
 ## Apply in Current Terminal
-이미 켜둔 Codex 세션에는 즉시 반영되지 않습니다.
+Changes do not appear in already-running Codex sessions.
 
-1. 현재 Codex 세션 종료
-2. 다시 실행
-3. 하단 HUD 확인
+1. Exit the current Codex session
+2. Start Codex again
+3. Check the HUD in the bottom status line
 
-확인 명령:
+Verification commands:
 ```bash
 grep -n "status_line_command" ~/.codex/config.toml
 cd ~/codex-hud && node dist/index.js --status-line --once --no-clear
@@ -44,19 +44,19 @@ cd ~/codex-hud && node dist/index.js --status-line --once --no-clear
 
 ## Commands
 ```bash
-npm run build      # TypeScript 빌드
-npm run dev        # watch 모드 빌드
-npm test           # 빌드 + Node test 실행
+npm run build      # Build TypeScript output
+npm run dev        # Build in watch mode
+npm test           # Build + run Node tests
 ```
 
 ## Release / Deployment
-배포 전 최소 절차:
-1. 로컬 검증: `npm test`
-2. 설치 검증: 새 터미널에서 `./install.sh`
-3. 적용 확인: `codex --version` 및 HUD 출력 확인
-4. 커밋/태그 푸시 후 GitHub 릴리즈 노트 업데이트
+Minimum pre-release checklist:
+1. Run local verification: `npm test`
+2. Validate install on a fresh terminal: `./install.sh`
+3. Confirm runtime behavior: `codex --version` and HUD output
+4. Push commit/tag and update GitHub release notes
 
-빠른 설치(사용자 배포용):
+Quick install for users:
 ```bash
 git clone https://github.com/anhannin/codex-hud.git
 cd codex-hud
@@ -65,9 +65,9 @@ cd codex-hud
 
 ## Color Control
 ```bash
-NO_COLOR=1 codex                 # HUD 색상 비활성화
-FORCE_COLOR=1 codex              # HUD 색상 강제 활성화
-FORCE_COLOR=0 codex              # HUD 색상 강제 비활성화
+NO_COLOR=1 codex                 # Disable HUD colors
+FORCE_COLOR=1 codex              # Force-enable HUD colors
+FORCE_COLOR=0 codex              # Force-disable HUD colors
 ```
 
 ## Example HUD Line
@@ -76,14 +76,14 @@ HUD • g5.3c • Usage ██░░░░░░░░ 25% (1h 30m / 5h) | █�
 ```
 
 ## Troubleshooting
-- HUD가 깨져 보임: 최신 버전 재설치 후 Codex 세션 재시작
-- 설치 후 반영 안 됨: 설치 전에 켠 세션이면 재시작 필요
-- `tmux: command not found`: tmux 모드는 선택 사항이며 필수 아님
+- HUD looks broken: reinstall latest build, then restart Codex session
+- Install succeeded but HUD not shown: restart sessions launched before install
+- `tmux: command not found`: tmux mode is optional, not required
 
 ## Project Layout
-- `src/`: HUD 파서/렌더러 소스
-- `dist/`: 빌드 결과
-- `scripts/`: 설치/패치/적용 스크립트
-- `patches/`: Codex TUI 패치 파일
-- `tests/`: 테스트
-- `docs/`: 분석/설계 문서
+- `src/`: HUD parser and renderer sources
+- `dist/`: Build output
+- `scripts/`: Install/patch/config scripts
+- `patches/`: Codex TUI patch files
+- `tests/`: Test files
+- `docs/`: Analysis and design docs

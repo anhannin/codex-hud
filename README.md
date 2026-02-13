@@ -1,15 +1,15 @@
 # Codex HUD
 
-Claude-HUD 스타일의 사용량/상태 정보를 Codex TUI 하단 status line에 표시하는 HUD 하네스입니다.
+HUD harness that renders Claude-HUD style usage and status data in the Codex TUI status line.
 
 ## What This Project Does
-- Codex rollout 로그(`~/.codex/sessions/**/rollout-*.jsonl`) 파싱
-- 모델/프로젝트/브랜치/사용량(5h, 7d) HUD 표시
-- 모델이 `spark`면 Spark limit, 아니면 기본 limit 자동 선택
-- `NO_COLOR` / `FORCE_COLOR` 기반 색상 제어 지원
+- Parse Codex rollout logs (`~/.codex/sessions/**/rollout-*.jsonl`)
+- Show model, project, branch, and usage windows (5h, 7d) in the HUD
+- Auto-select Spark limits when the active model is `spark`, otherwise use default limits
+- Support color control via `NO_COLOR` and `FORCE_COLOR`
 
 ## Repository Layout
-현재 실제 프로젝트 코드는 `Codex-HUD/` 하위에 있습니다.
+The active project files are currently under `Codex-HUD/`.
 - Main guide: `Codex-HUD/README.md`
 - Source: `Codex-HUD/src/`
 - Tests: `Codex-HUD/tests/`
@@ -23,10 +23,10 @@ cd codex-hud/Codex-HUD
 ./install.sh
 ```
 
-`install.sh`가 자동 수행:
-- HUD 빌드 (`npm ci`, `npm run build`)
-- patched Codex 빌드 및 `~/.local/bin/codex` 설치
-- `~/.codex/config.toml`에 status line command 설정
+`install.sh` automatically:
+- Builds the HUD (`npm ci`, `npm run build`)
+- Builds patched Codex and installs it to `~/.local/bin/codex`
+- Configures `~/.codex/config.toml` with the status line command
 
 ## Supported Environment
 - Linux (Ubuntu/Debian, Fedora/RHEL, Arch, openSUSE)

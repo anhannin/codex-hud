@@ -34,6 +34,28 @@ function formatWindow(windowMinutes?: number): string {
   return `${windowMinutes}m`;
 }
 
+function detectStatusWidth(): number {
+  const envWidth = Number.parseInt(process.env.CODEX_HUD_WIDTH ?? process.env.COLUMNS ?? '', 10);
+  if (!Number.isNaN(envWidth) && envWidth > 0) return envWidth;
+  if (process.stdout.isTTY && process.stdout.columns && process.stdout.columns > 0) return process.stdout.columns;
+  return 120;
+}
+
+function shortenModel(model: string): string {
+  return model
+    .toLowerCase()
+    .replace(/^gpt-/, 'g')
+    .replace(/-codex-spark$/, 's')
+    .replace(/-codex$/, 'c')
+    .replace(/\s+/g, '');
+}
+
+function trimToWidth(text: string, width: number): string {
+  if (text.length <= width) return `${text}  `;
+  if (width < 6) return text.slice(0, Math.max(1, width));
+  return `${text.slice(0, width - 1)}… `;
+}
+
 function toolPrefix(tool: ToolActivity): string {
   if (tool.status === 'running') return yellow('◐');
   if (tool.status === 'completed') return green('✓');
@@ -100,30 +122,31 @@ export function render(snapshot: HudSnapshot, config: HudConfig): string[] {
 }
 
 export function renderTmuxLine(snapshot: HudSnapshot): string {
-  const model = snapshot.model ?? 'unknown-model';
-  const modelShort = model
-    .replace(/^gpt-/i, 'g')
-    .replace(/-codex-spark$/i, 's')
-    .replace(/-codex$/i, 'c')
-    .replace(/\s+/g, '');
-  const parts: string[] = [`HUD`, modelShort];
+  const modelShort = shortenModel(snapshot.model ?? 'unknown-model');
+  const width = detectStatusWidth();
+  const turn = snapshot.turnState === 'running' ? 'RUN' : 'IDLE';
 
-  if (snapshot.ratePrimary) {
-    const p = Math.round(snapshot.ratePrimary.usedPercent);
-    const pRemain = formatRemaining(snapshot.ratePrimary.resetsAt) || '--';
-    const pWin = formatWindow(snapshot.ratePrimary.windowMinutes);
-    let usage = `Usage ${bar(p)} ${p}% (${pRemain} / ${pWin})`;
-    if (snapshot.rateSecondary) {
-      const s = Math.round(snapshot.rateSecondary.usedPercent);
-      const sRemain = formatRemaining(snapshot.rateSecondary.resetsAt) || '--';
-      const sWin = formatWindow(snapshot.rateSecondary.windowMinutes);
-      usage += ` | ${bar(s)} ${s}% (${sRemain} / ${sWin})`;
-    }
-    parts.push(usage);
+  const p = snapshot.ratePrimary ? Math.round(snapshot.ratePrimary.usedPercent) : undefined;
+  const pRemain = snapshot.ratePrimary ? (formatRemaining(snapshot.ratePrimary.resetsAt) || '--') : '--';
+  const pWin = snapshot.ratePrimary ? formatWindow(snapshot.ratePrimary.windowMinutes) : '?';
+  const s = snapshot.rateSecondary ? Math.round(snapshot.rateSecondary.usedPercent) : undefined;
+  const sRemain = snapshot.rateSecondary ? (formatRemaining(snapshot.rateSecondary.resetsAt) || '--') : '--';
+  const sWin = snapshot.rateSecondary ? formatWindow(snapshot.rateSecondary.windowMinutes) : '?';
+
+  let line: string;
+  if (width >= 120) {
+    const u5 = p !== undefined ? `U5 ${bar(p, 10)} ${p}% (${pRemain}/${pWin})` : 'U5 --';
+    const u7 = s !== undefined ? `U7 ${bar(s, 10)} ${s}% (${sRemain}/${sWin})` : '';
+    line = ['HUD', modelShort, turn, u5, u7].filter(Boolean).join(' • ');
+  } else if (width >= 90) {
+    const u5 = p !== undefined ? `U5 ${bar(p, 8)} ${p}% (${pRemain})` : 'U5 --';
+    const u7 = s !== undefined ? `U7 ${bar(s, 8)} ${s}% (${sRemain})` : '';
+    line = ['HUD', modelShort, u5, u7].filter(Boolean).join(' • ');
+  } else {
+    const u5 = p !== undefined ? `U5 ${p}% ${pRemain}` : 'U5 --';
+    const u7 = s !== undefined ? `U7 ${s}% ${sRemain}` : '';
+    line = ['HUD', modelShort, u5, u7].filter(Boolean).join(' | ');
   }
 
-  const plain = parts.join(' • ');
-  const maxLen = 120;
-  if (plain.length <= maxLen) return `${plain}  `;
-  return `${plain.slice(0, maxLen - 1)}… `;
+  return trimToWidth(line, width);
 }

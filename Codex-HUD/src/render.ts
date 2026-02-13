@@ -147,24 +147,20 @@ export function renderTmuxLine(snapshot: HudSnapshot): string {
   const s = snapshot.rateSecondary ? Math.round(snapshot.rateSecondary.usedPercent) : undefined;
   const sRemain = snapshot.rateSecondary ? (formatRemaining(snapshot.rateSecondary.resetsAt) || '--') : '--';
   const sWin = snapshot.rateSecondary ? formatWindow(snapshot.rateSecondary.windowMinutes) : '?';
-  const c = snapshot.contextUsedPercent;
 
   let line: string;
   if (width >= 135) {
-    const ctx = c !== undefined ? `Context ${bar(c, 8)} ${c}%` : '';
     const u5 = p !== undefined ? `Usage ${bar(p, 8)} ${p}% (${pRemain} / ${pWin})` : 'Usage --';
     const u7 = s !== undefined ? `${bar(s, 6)} ${s}% (${sRemain} / ${sWin})` : '';
-    line = [badge, repoPart, ctx, u5, u7].filter(Boolean).join(' | ');
+    line = [badge, repoPart, u5, u7].filter(Boolean).join(' | ');
   } else if (width >= 105) {
-    const ctx = c !== undefined ? `C ${bar(c, 6)} ${c}%` : '';
     const u5 = p !== undefined ? `U5 ${bar(p, 6)} ${p}% (${pRemain})` : 'U5 --';
     const u7 = s !== undefined ? `U7 ${bar(s, 5)} ${s}% (${sRemain})` : '';
-    line = [badge, repoPart, ctx, u5, u7].filter(Boolean).join(' | ');
+    line = [badge, repoPart, u5, u7].filter(Boolean).join(' | ');
   } else {
-    const cShort = c !== undefined ? `C${c}%` : '';
     const u5 = p !== undefined ? `U5 ${p}%` : 'U5 --';
     const u7 = s !== undefined ? `U7 ${s}%` : '';
-    line = [badge, project, cShort, u5, u7].filter(Boolean).join(' | ');
+    line = [badge, project, u5, u7].filter(Boolean).join(' | ');
   }
 
   return trimToWidth(line, width);

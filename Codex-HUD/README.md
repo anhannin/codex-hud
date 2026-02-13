@@ -1,120 +1,60 @@
 # Codex HUD
 
-Real-time HUD harness for Codex sessions.
+Codex TUI 하단에 Claude-HUD 스타일 사용량/상태 정보를 표시하는 HUD 하네스입니다.
 
-`codex-hud` reads Codex rollout JSONL files (`~/.codex/sessions/**/rollout-*.jsonl`) and renders a concise, multi-line operational view:
-- model + project + git state
-- context usage + rate-limit windows
-- running/recent tool activity (exec + MCP)
-- current plan progress
+## What It Does
+- Codex rollout 로그(`~/.codex/sessions/**/rollout-*.jsonl`)를 파싱
+- 현재 모델/프로젝트/깃 브랜치 상태 표시
+- 5시간/7일 사용량 바와 남은 시간 표시
+- 모델이 `spark`면 Spark limit, 아니면 기본 limit 자동 선택
 
-## Why this shape
-Codex currently provides built-in `tui.status_line` items, but not a Claude-style external statusline command plugin API. This project uses rollout events as the durable data source.
-
-## Install
-One-shot install (recommended):
+## Quick Start
 ```bash
 git clone https://github.com/anhannin/codex-hud.git
 cd codex-hud
 ./install.sh
 ```
 
-What `install.sh` does automatically:
-- detects or clones `openai/codex` source
-- applies the Codex status-line patch
-- installs Rust (`rustup`) if missing, then builds patched `codex`
-- installs patched binary to `~/.local/bin/codex` and updates shell PATH preference
-- configures `~/.codex/config.toml` with HUD status-line settings
+`install.sh`가 자동으로 수행하는 작업:
+- HUD 빌드 (`npm ci`, `npm run build`)
+- Codex 소스 패치 적용 및 patched `codex` 빌드
+- `~/.local/bin/codex` 배치
+- `~/.codex/config.toml`에 `status_line_command` 설정
 
-Manual install:
+## Apply in Current Terminal
+이미 켜둔 Codex 세션에는 즉시 반영되지 않습니다.
+
+1. 현재 Codex 세션 종료
+2. 다시 실행
+3. 하단 HUD 확인
+
+확인 명령:
 ```bash
-npm ci
-npm run build
-npm link
+grep -n "status_line_command" ~/.codex/config.toml
+cd ~/codex-hud && node dist/index.js --status-line --once --no-clear
 ```
 
-Then run:
+## Commands
 ```bash
-codex-hud
+npm run build      # TypeScript 빌드
+npm run dev        # watch 모드 빌드
+npm test           # 빌드 + Node test 실행
 ```
 
-## Usage
-```bash
-# Watch latest session
-codex-hud
-
-# One-shot render
-codex-hud --once
-
-# Target a specific rollout file
-codex-hud --rollout ~/.codex/sessions/2026/02/13/rollout-....jsonl --once
-
-# Custom refresh interval
-codex-hud --interval 500
+## Example HUD Line
+```text
+HUD • g5.3c • Usage ██░░░░░░░░ 25% (1h 30m / 5h) | ████████░░ 80% (1d 3h / 7d)
 ```
 
-## Tmux Bottom Bar (same screen)
-If you use Codex inside tmux, you can pin HUD to the bottom status bar:
+## Troubleshooting
+- HUD가 깨져 보임: 최신 버전 재설치 후 Codex 세션 재시작
+- 설치 후 반영 안 됨: 설치 전에 켠 세션이면 재시작 필요
+- `tmux: command not found`: tmux 모드는 선택 사항이며 필수 아님
 
-```bash
-cd /home/avees/Codex-HUD
-npm run build
-./scripts/tmux-enable.sh
-```
-
-Disable later:
-
-```bash
-./scripts/tmux-disable.sh
-```
-
-## Config
-Optional config file: `~/.codex-hud/config.json`
-
-```json
-{
-  "refreshMs": 700,
-  "maxTools": 3,
-  "showPlan": true,
-  "showRates": true
-}
-```
-
-## Development
-```bash
-npm run build
-npm test
-```
-
-## References
-- Analysis and port notes: `docs/claude-hud-analysis.md`
-
-## Codex Source Patch (same-screen bottom line)
-To get Claude-hud-style inline bottom status in the same Codex TUI screen, use the provided Codex source patch.
-
-1. Clone `openai/codex`
-2. Apply patch:
-
-```bash
-cd /home/avees/Codex-HUD
-./scripts/apply-codex-patch.sh /path/to/openai-codex
-```
-
-3. Build/run patched Codex from source
-4. Auto-configure `~/.codex/config.toml`:
-
-```bash
-./scripts/configure-codex-statusline.sh
-```
-
-Manual equivalent:
-
-```toml
-[tui]
-status_line = []
-status_line_command = "cd /home/avees/Codex-HUD && node dist/index.js --status-line --once --no-clear"
-```
-
-Notes:
-- `status_line_command` output is appended to the TUI status line.
-- Command is executed asynchronously with a short timeout to avoid UI stalls.
+## Project Layout
+- `src/`: HUD 파서/렌더러 소스
+- `dist/`: 빌드 결과
+- `scripts/`: 설치/패치/적용 스크립트
+- `patches/`: Codex TUI 패치 파일
+- `tests/`: 테스트
+- `docs/`: 분석/설계 문서

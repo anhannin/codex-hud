@@ -111,8 +111,209 @@ index c04665e..201554d 100644
      /// Apply a user-confirmed status-line item ordering/selection.
      StatusLineSetup {
          items: Vec<StatusLineItem>,
+diff --git a/codex-rs/tui/src/bottom_pane/chat_composer.rs b/codex-rs/tui/src/bottom_pane/chat_composer.rs
+index 5ef643f..02daa7f 100644
+--- a/codex-rs/tui/src/bottom_pane/chat_composer.rs
++++ b/codex-rs/tui/src/bottom_pane/chat_composer.rs
+@@ -132,6 +132,7 @@ use super::footer::render_context_right;
+ use super::footer::render_footer_from_props;
+ use super::footer::render_footer_hint_items;
+ use super::footer::render_footer_line;
++use super::footer::render_footer_lines;
+ use super::footer::reset_mode_after_activity;
+ use super::footer::single_line_footer_layout;
+ use super::footer::toggle_shortcut_mode;
+@@ -2729,6 +2730,23 @@ impl ChatComposer {
+         if self.footer_flash_visible() {
+             return Some(1);
+         }
++        if self.status_line_enabled
++            && matches!(
++                self.footer_mode(),
++                FooterMode::ComposerEmpty | FooterMode::ComposerHasDraft
++            )
++            && let Some(value) = self.status_line_value.as_ref().map(ToString::to_string)
++        {
++            let line_count = value
++                .lines()
++                .map(str::trim)
++                .filter(|line| !line.is_empty())
++                .take(2)
++                .count();
++            if line_count > 1 {
++                return Some(line_count as u16);
++            }
++        }
+         self.footer_hint_override
+             .as_ref()
+             .map(|items| if items.is_empty() { 0 } else { 1 })
+@@ -3341,23 +3359,45 @@ impl ChatComposer {
+                 };
+                 let available_width =
+                     hint_rect.width.saturating_sub(FOOTER_INDENT_COLS as u16) as usize;
+-                let status_line = footer_props
+-                    .status_line_value
+-                    .as_ref()
+-                    .map(|line| line.clone().dim());
+                 let status_line_candidate = footer_props.status_line_enabled
+                     && matches!(
+                         footer_props.mode,
+                         FooterMode::ComposerEmpty | FooterMode::ComposerHasDraft
+                     );
+-                let mut truncated_status_line = if status_line_candidate {
+-                    status_line.as_ref().map(|line| {
+-                        truncate_line_with_ellipsis_if_overflow(line.clone(), available_width)
++                let status_line_lines = if status_line_candidate {
++                    footer_props.status_line_value.as_ref().map(|line| {
++                        line.to_string()
++                            .lines()
++                            .map(str::trim)
++                            .filter(|line| !line.is_empty())
++                            .take(2)
++                            .map(|line| Line::from(line.to_string()).dim())
++                            .collect::<Vec<_>>()
++                    })
++                } else {
++                    None
++                };
++                let mut truncated_status_lines = if status_line_candidate {
++                    status_line_lines.as_ref().map(|lines| {
++                        lines
++                            .iter()
++                            .cloned()
++                            .map(|line| {
++                                truncate_line_with_ellipsis_if_overflow(line, available_width)
++                            })
++                            .collect::<Vec<_>>()
+                     })
+                 } else {
+                     None
+                 };
+-                let status_line_active = status_line_candidate && truncated_status_line.is_some();
++                let status_line_active = status_line_candidate
++                    && truncated_status_lines
++                        .as_ref()
++                        .is_some_and(|lines| !lines.is_empty());
++                let status_line_multiline = status_line_active
++                    && truncated_status_lines
++                        .as_ref()
++                        .is_some_and(|lines| lines.len() > 1);
+                 let left_mode_indicator = if status_line_active {
+                     None
+                 } else {
+@@ -3371,8 +3411,9 @@ impl ChatComposer {
+                 } else if let Some(items) = self.footer_hint_override.as_ref() {
+                     footer_hint_items_width(items)
+                 } else if status_line_active {
+-                    truncated_status_line
++                    truncated_status_lines
+                         .as_ref()
++                        .and_then(|lines| lines.first())
+                         .map(|line| line.width() as u16)
+                         .unwrap_or(0)
+                 } else {
+@@ -3385,14 +3426,18 @@ impl ChatComposer {
+                     )
+                 };
+                 let right_line = if status_line_active {
+-                    let full =
+-                        mode_indicator_line(self.collaboration_mode_indicator, show_cycle_hint);
+-                    let compact = mode_indicator_line(self.collaboration_mode_indicator, false);
+-                    let full_width = full.as_ref().map(|l| l.width() as u16).unwrap_or(0);
+-                    if can_show_left_with_context(hint_rect, left_width, full_width) {
+-                        full
++                    if status_line_multiline {
++                        None
+                     } else {
+-                        compact
++                        let full =
++                            mode_indicator_line(self.collaboration_mode_indicator, show_cycle_hint);
++                        let compact = mode_indicator_line(self.collaboration_mode_indicator, false);
++                        let full_width = full.as_ref().map(|l| l.width() as u16).unwrap_or(0);
++                        if can_show_left_with_context(hint_rect, left_width, full_width) {
++                            full
++                        } else {
++                            compact
++                        }
+                     }
+                 } else {
+                     Some(context_window_line(
+@@ -3404,12 +3449,17 @@ impl ChatComposer {
+                 if status_line_active
+                     && let Some(max_left) = max_left_width_for_right(hint_rect, right_width)
+                     && left_width > max_left
+-                    && let Some(line) = status_line.as_ref().map(|line| {
+-                        truncate_line_with_ellipsis_if_overflow(line.clone(), max_left as usize)
+-                    })
++                    && let Some(lines) = truncated_status_lines.as_ref()
+                 {
+-                    left_width = line.width() as u16;
+-                    truncated_status_line = Some(line);
++                    let mut adjusted = lines.clone();
++                    if let Some(first) = adjusted.first_mut() {
++                        *first = truncate_line_with_ellipsis_if_overflow(
++                            first.clone(),
++                            max_left as usize,
++                        );
++                        left_width = first.width() as u16;
++                        truncated_status_lines = Some(adjusted);
++                    }
+                 }
+                 let can_show_left_and_context =
+                     can_show_left_with_context(hint_rect, left_width, right_width);
+@@ -3456,8 +3506,12 @@ impl ChatComposer {
+                     match summary_left {
+                         SummaryLeft::Default => {
+                             if status_line_active {
+-                                if let Some(line) = truncated_status_line.clone() {
+-                                    render_footer_line(hint_rect, buf, line);
++                                if let Some(lines) = truncated_status_lines.clone() {
++                                    if lines.len() > 1 {
++                                        render_footer_lines(hint_rect, buf, lines);
++                                    } else if let Some(line) = lines.first().cloned() {
++                                        render_footer_line(hint_rect, buf, line);
++                                    }
+                                 } else {
+                                     render_footer_from_props(
+                                         hint_rect,
+@@ -3493,8 +3547,12 @@ impl ChatComposer {
+                 } else if let Some(items) = self.footer_hint_override.as_ref() {
+                     render_footer_hint_items(hint_rect, buf, items);
+                 } else if status_line_active {
+-                    if let Some(line) = truncated_status_line {
+-                        render_footer_line(hint_rect, buf, line);
++                    if let Some(lines) = truncated_status_lines {
++                        if lines.len() > 1 {
++                            render_footer_lines(hint_rect, buf, lines);
++                        } else if let Some(line) = lines.first().cloned() {
++                            render_footer_line(hint_rect, buf, line);
++                        }
+                     }
+                 } else {
+                     render_footer_from_props(
+diff --git a/codex-rs/tui/src/bottom_pane/footer.rs b/codex-rs/tui/src/bottom_pane/footer.rs
+index f6f61ac..639e14b 100644
+--- a/codex-rs/tui/src/bottom_pane/footer.rs
++++ b/codex-rs/tui/src/bottom_pane/footer.rs
+@@ -198,6 +198,16 @@ pub(crate) fn render_footer_line(area: Rect, buf: &mut Buffer, line: Line<'stati
+     .render(area, buf);
+ }
+ 
++/// Render precomputed footer lines (for multi-line custom status output).
++pub(crate) fn render_footer_lines(area: Rect, buf: &mut Buffer, lines: Vec<Line<'static>>) {
++    Paragraph::new(prefix_lines(
++        lines,
++        " ".repeat(FOOTER_INDENT_COLS).into(),
++        " ".repeat(FOOTER_INDENT_COLS).into(),
++    ))
++    .render(area, buf);
++}
++
+ /// Render footer content directly from `FooterProps`.
+ ///
+ /// This is intentionally not part of the width-based collapse/fallback logic.
 diff --git a/codex-rs/tui/src/chatwidget.rs b/codex-rs/tui/src/chatwidget.rs
-index 81c9fae..e1d0b49 100644
+index 81c9fae..8467512 100644
 --- a/codex-rs/tui/src/chatwidget.rs
 +++ b/codex-rs/tui/src/chatwidget.rs
 @@ -128,6 +128,7 @@ use codex_protocol::items::AgentMessageItem;
@@ -123,7 +324,7 @@ index 81c9fae..e1d0b49 100644
  use codex_protocol::request_user_input::RequestUserInputEvent;
  use codex_protocol::user_input::TextElement;
  use codex_protocol::user_input::UserInput;
-@@ -156,6 +157,48 @@ const PLAN_IMPLEMENTATION_YES: &str = "Yes, implement this plan";
+@@ -156,6 +157,61 @@ const PLAN_IMPLEMENTATION_YES: &str = "Yes, implement this plan";
  const PLAN_IMPLEMENTATION_NO: &str = "No, stay in Plan mode";
  const PLAN_IMPLEMENTATION_CODING_MESSAGE: &str = "Implement the plan.";
  const CONNECTORS_SELECTION_VIEW_ID: &str = "connectors-selection";
@@ -185,7 +386,7 @@ index 81c9fae..e1d0b49 100644
  
  use crate::app_event::AppEvent;
  use crate::app_event::ConnectorsSnapshot;
-@@ -619,6 +662,12 @@ pub(crate) struct ChatWidget {
+@@ -619,6 +675,12 @@ pub(crate) struct ChatWidget {
      status_line_branch_pending: bool,
      // True once we've attempted a branch lookup for the current CWD.
      status_line_branch_lookup_complete: bool,
@@ -198,7 +399,7 @@ index 81c9fae..e1d0b49 100644
      external_editor_state: ExternalEditorState,
  }
  
-@@ -878,6 +927,11 @@ impl ChatWidget {
+@@ -878,6 +940,11 @@ impl ChatWidget {
      /// placeholders so the line remains compact and stable.
      pub(crate) fn refresh_status_line(&mut self) {
          let (items, invalid_items) = self.status_line_items_with_invalids();
@@ -210,7 +411,7 @@ index 81c9fae..e1d0b49 100644
          if self.thread_id.is_some()
              && !invalid_items.is_empty()
              && self
-@@ -901,7 +955,7 @@ impl ChatWidget {
+@@ -901,7 +968,7 @@ impl ChatWidget {
              self.status_line_branch_pending = false;
              self.status_line_branch_lookup_complete = false;
          }
@@ -219,7 +420,7 @@ index 81c9fae..e1d0b49 100644
          self.bottom_pane.set_status_line_enabled(enabled);
          if !enabled {
              self.set_status_line(None);
-@@ -912,10 +966,22 @@ impl ChatWidget {
+@@ -912,10 +979,22 @@ impl ChatWidget {
          self.sync_status_line_branch_state(&cwd);
  
          if items.contains(&StatusLineItem::GitBranch) && !self.status_line_branch_lookup_complete {
@@ -243,7 +444,7 @@ index 81c9fae..e1d0b49 100644
          for item in items {
              if let Some(value) = self.status_line_value_for_item(&item) {
                  parts.push(value);
-@@ -963,6 +1029,16 @@ impl ChatWidget {
+@@ -963,6 +1042,16 @@ impl ChatWidget {
          self.status_line_branch_lookup_complete = true;
      }
  
@@ -260,7 +461,7 @@ index 81c9fae..e1d0b49 100644
      /// Forces a new git-branch lookup when `GitBranch` is part of the configured status line.
      fn request_status_line_branch_refresh(&mut self) {
          let (items, _) = self.status_line_items_with_invalids();
-@@ -2654,6 +2730,9 @@ impl ChatWidget {
+@@ -2654,6 +2743,9 @@ impl ChatWidget {
              status_line_branch_cwd: None,
              status_line_branch_pending: false,
              status_line_branch_lookup_complete: false,
@@ -270,7 +471,7 @@ index 81c9fae..e1d0b49 100644
              external_editor_state: ExternalEditorState::Closed,
          };
  
-@@ -2666,7 +2745,12 @@ impl ChatWidget {
+@@ -2666,7 +2758,12 @@ impl ChatWidget {
                  .config
                  .tui_status_line
                  .as_ref()
@@ -284,7 +485,7 @@ index 81c9fae..e1d0b49 100644
          );
          widget.bottom_pane.set_collaboration_modes_enabled(
              widget.config.features.enabled(Feature::CollaborationModes),
-@@ -2819,6 +2903,9 @@ impl ChatWidget {
+@@ -2819,6 +2916,9 @@ impl ChatWidget {
              status_line_branch_cwd: None,
              status_line_branch_pending: false,
              status_line_branch_lookup_complete: false,
@@ -294,7 +495,7 @@ index 81c9fae..e1d0b49 100644
              external_editor_state: ExternalEditorState::Closed,
          };
  
-@@ -2831,7 +2918,12 @@ impl ChatWidget {
+@@ -2831,7 +2931,12 @@ impl ChatWidget {
                  .config
                  .tui_status_line
                  .as_ref()
@@ -308,7 +509,7 @@ index 81c9fae..e1d0b49 100644
          );
          widget.bottom_pane.set_collaboration_modes_enabled(
              widget.config.features.enabled(Feature::CollaborationModes),
-@@ -2973,6 +3065,9 @@ impl ChatWidget {
+@@ -2973,6 +3078,9 @@ impl ChatWidget {
              status_line_branch_cwd: None,
              status_line_branch_pending: false,
              status_line_branch_lookup_complete: false,
@@ -318,7 +519,7 @@ index 81c9fae..e1d0b49 100644
              external_editor_state: ExternalEditorState::Closed,
          };
  
-@@ -2985,7 +3080,12 @@ impl ChatWidget {
+@@ -2985,7 +3093,12 @@ impl ChatWidget {
                  .config
                  .tui_status_line
                  .as_ref()
@@ -332,7 +533,7 @@ index 81c9fae..e1d0b49 100644
          );
          widget.bottom_pane.set_collaboration_modes_enabled(
              widget.config.features.enabled(Feature::CollaborationModes),
-@@ -4371,6 +4471,39 @@ impl ChatWidget {
+@@ -4371,6 +4484,39 @@ impl ChatWidget {
          });
      }
  

@@ -50,6 +50,17 @@ function shortenModel(model: string): string {
     .replace(/\s+/g, '');
 }
 
+function modelTier(model: string): string {
+  if (model.toLowerCase().includes('spark')) return 'Spark';
+  return 'Max';
+}
+
+function projectFromCwd(cwd?: string): string {
+  if (!cwd) return 'project';
+  const parts = cwd.split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] || 'project';
+}
+
 function trimToWidth(text: string, width: number): string {
   if (text.length <= width) return `${text}  `;
   if (width < 6) return text.slice(0, Math.max(1, width));
@@ -122,9 +133,13 @@ export function render(snapshot: HudSnapshot, config: HudConfig): string[] {
 }
 
 export function renderTmuxLine(snapshot: HudSnapshot): string {
-  const modelShort = shortenModel(snapshot.model ?? 'unknown-model');
+  const modelRaw = snapshot.model ?? 'unknown-model';
+  const modelShort = shortenModel(modelRaw);
+  const badge = `[${modelShort} | ${modelTier(modelRaw)}]`;
   const width = detectStatusWidth();
-  const turn = snapshot.turnState === 'running' ? 'RUN' : 'IDLE';
+  const project = projectFromCwd(snapshot.cwd);
+  const git = snapshot.gitBranch ? `git:(${snapshot.gitBranch}${snapshot.gitDirty ? '*' : ''})` : '';
+  const repoPart = git ? `${project} ${git}` : project;
 
   const p = snapshot.ratePrimary ? Math.round(snapshot.ratePrimary.usedPercent) : undefined;
   const pRemain = snapshot.ratePrimary ? (formatRemaining(snapshot.ratePrimary.resetsAt) || '--') : '--';
@@ -132,20 +147,24 @@ export function renderTmuxLine(snapshot: HudSnapshot): string {
   const s = snapshot.rateSecondary ? Math.round(snapshot.rateSecondary.usedPercent) : undefined;
   const sRemain = snapshot.rateSecondary ? (formatRemaining(snapshot.rateSecondary.resetsAt) || '--') : '--';
   const sWin = snapshot.rateSecondary ? formatWindow(snapshot.rateSecondary.windowMinutes) : '?';
+  const c = snapshot.contextUsedPercent;
 
   let line: string;
-  if (width >= 120) {
-    const u5 = p !== undefined ? `U5 ${bar(p, 10)} ${p}% (${pRemain}/${pWin})` : 'U5 --';
-    const u7 = s !== undefined ? `U7 ${bar(s, 10)} ${s}% (${sRemain}/${sWin})` : '';
-    line = ['HUD', modelShort, turn, u5, u7].filter(Boolean).join(' • ');
-  } else if (width >= 90) {
-    const u5 = p !== undefined ? `U5 ${bar(p, 8)} ${p}% (${pRemain})` : 'U5 --';
-    const u7 = s !== undefined ? `U7 ${bar(s, 8)} ${s}% (${sRemain})` : '';
-    line = ['HUD', modelShort, u5, u7].filter(Boolean).join(' • ');
+  if (width >= 135) {
+    const ctx = c !== undefined ? `Context ${bar(c, 8)} ${c}%` : '';
+    const u5 = p !== undefined ? `Usage ${bar(p, 8)} ${p}% (${pRemain} / ${pWin})` : 'Usage --';
+    const u7 = s !== undefined ? `${bar(s, 6)} ${s}% (${sRemain} / ${sWin})` : '';
+    line = [badge, repoPart, ctx, u5, u7].filter(Boolean).join(' | ');
+  } else if (width >= 105) {
+    const ctx = c !== undefined ? `C ${bar(c, 6)} ${c}%` : '';
+    const u5 = p !== undefined ? `U5 ${bar(p, 6)} ${p}% (${pRemain})` : 'U5 --';
+    const u7 = s !== undefined ? `U7 ${bar(s, 5)} ${s}% (${sRemain})` : '';
+    line = [badge, repoPart, ctx, u5, u7].filter(Boolean).join(' | ');
   } else {
-    const u5 = p !== undefined ? `U5 ${p}% ${pRemain}` : 'U5 --';
-    const u7 = s !== undefined ? `U7 ${s}% ${sRemain}` : '';
-    line = ['HUD', modelShort, u5, u7].filter(Boolean).join(' | ');
+    const cShort = c !== undefined ? `C${c}%` : '';
+    const u5 = p !== undefined ? `U5 ${p}%` : 'U5 --';
+    const u7 = s !== undefined ? `U7 ${s}%` : '';
+    line = [badge, project, cShort, u5, u7].filter(Boolean).join(' | ');
   }
 
   return trimToWidth(line, width);

@@ -109,10 +109,14 @@ export function renderTmuxLine(snapshot: HudSnapshot): string {
 
   if (snapshot.ratePrimary) {
     const p = Math.round(snapshot.ratePrimary.usedPercent);
-    let usage = `U5 ${percentColor(p)(`${p}%`)}`;
+    const pRemain = formatRemaining(snapshot.ratePrimary.resetsAt) || '--';
+    const pWin = formatWindow(snapshot.ratePrimary.windowMinutes);
+    let usage = `Usage ${bar(p)} ${percentColor(p)(`${p}%`)} (${pRemain} / ${pWin})`;
     if (snapshot.rateSecondary) {
       const s = Math.round(snapshot.rateSecondary.usedPercent);
-      usage += ` ${dim('|')} U7 ${percentColor(s)(`${s}%`)}`;
+      const sRemain = formatRemaining(snapshot.rateSecondary.resetsAt) || '--';
+      const sWin = formatWindow(snapshot.rateSecondary.windowMinutes);
+      usage += ` ${dim('|')} ${bar(s)} ${percentColor(s)(`${s}%`)} (${sRemain} / ${sWin})`;
     }
     parts.push(usage);
   }

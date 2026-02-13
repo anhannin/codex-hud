@@ -41,6 +41,13 @@ npm run dev        # watch 모드 빌드
 npm test           # 빌드 + Node test 실행
 ```
 
+## Color Control
+```bash
+NO_COLOR=1 codex                 # HUD 색상 비활성화
+FORCE_COLOR=1 codex              # HUD 색상 강제 활성화
+FORCE_COLOR=0 codex              # HUD 색상 강제 비활성화
+```
+
 ## Example HUD Line
 ```text
 HUD • g5.3c • Usage ██░░░░░░░░ 25% (1h 30m / 5h) | ████████░░ 80% (1d 3h / 7d)

@@ -1,6 +1,30 @@
 export const RESET = '\x1b[0m';
 
+function shouldUseColor(): boolean {
+  const force = process.env.FORCE_COLOR;
+  if (force !== undefined) {
+    const normalized = force.trim().toLowerCase();
+    return !(normalized === '0' || normalized === 'false');
+  }
+
+  if (process.env.NO_COLOR !== undefined) {
+    return false;
+  }
+
+  if (process.env.CLICOLOR === '0') {
+    return false;
+  }
+
+  if (process.env.CLICOLOR_FORCE !== undefined) {
+    const normalized = process.env.CLICOLOR_FORCE.trim().toLowerCase();
+    return !(normalized === '0' || normalized === 'false');
+  }
+
+  return true;
+}
+
 function wrap(code: number, s: string): string {
+  if (!shouldUseColor()) return s;
   return `\x1b[${code}m${s}${RESET}`;
 }
 
@@ -15,7 +39,7 @@ export const red = (s: string): string => wrap(31, s);
 
 export function percentColor(percent: number): (s: string) => string {
   if (percent >= 85) return red;
-  if (percent >= 70) return yellow;
+  if (percent >= 50) return yellow;
   return green;
 }
 

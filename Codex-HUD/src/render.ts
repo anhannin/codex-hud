@@ -1,4 +1,4 @@
-import { bar, blue, bold, cyan, dim, green, magenta, percentColor, red, yellow } from './colors.js';
+import { RESET, bar, blue, bold, cyan, dim, green, magenta, percentColor, red, yellow } from './colors.js';
 import type { HudConfig, HudSnapshot, ToolActivity } from './types.js';
 
 function formatTokens(value: number): string {
@@ -62,9 +62,47 @@ function projectFromCwd(cwd?: string): string {
 }
 
 function trimToWidth(text: string, width: number): string {
-  if (text.length <= width) return `${text}  `;
-  if (width < 6) return text.slice(0, Math.max(1, width));
-  return `${text.slice(0, width - 1)}… `;
+  const visibleLen = visibleLength(text);
+  if (visibleLen <= width) return `${text}${' '.repeat(Math.max(0, width - visibleLen + 2))}`;
+  if (width < 6) return `${truncateVisible(text, width)}${RESET}`;
+
+  const visibleBudget = Math.max(1, width - 1);
+  const truncated = truncateVisible(text, visibleBudget);
+  return `${truncated}…${RESET}`;
+}
+
+const ANSI_RE = /\x1b\[[0-9;]*m/g;
+
+function visibleLength(text: string): number {
+  return text.replace(ANSI_RE, '').length;
+}
+
+function truncateVisible(text: string, maxVisible: number): string {
+  if (maxVisible <= 0) return '';
+  if (visibleLength(text) <= maxVisible) return text;
+
+  let out = '';
+  let visible = 0;
+  for (let i = 0; i < text.length && visible < maxVisible;) {
+    if (text[i] === '\x1b') {
+      const rest = text.slice(i);
+      const match = rest.match(ANSI_RE);
+      if (match) {
+        out += match[0];
+        i += match[0].length;
+        continue;
+      }
+    }
+
+    out += text[i];
+    visible += 1;
+    i += 1;
+  }
+
+  if (out.endsWith(RESET)) {
+    return out;
+  }
+  return `${out}${RESET}`;
 }
 
 function toolPrefix(tool: ToolActivity): string {
@@ -135,7 +173,7 @@ export function render(snapshot: HudSnapshot, config: HudConfig): string[] {
 export function renderTmuxLine(snapshot: HudSnapshot): string {
   const modelRaw = snapshot.model ?? 'unknown-model';
   const modelShort = shortenModel(modelRaw);
-  const badge = `[${modelShort} | ${modelTier(modelRaw)}]`;
+  const badge = cyan(`[${modelShort} | ${modelTier(modelRaw)}]`);
   const width = detectStatusWidth();
   const project = projectFromCwd(snapshot.cwd);
   const git = snapshot.gitBranch ? `git:(${snapshot.gitBranch}${snapshot.gitDirty ? '*' : ''})` : '';
@@ -150,17 +188,26 @@ export function renderTmuxLine(snapshot: HudSnapshot): string {
 
   let line: string;
   if (width >= 135) {
-    const u5 = p !== undefined ? `Usage ${bar(p, 8)} ${p}% (${pRemain} / ${pWin})` : 'Usage --';
-    const u7 = s !== undefined ? `${bar(s, 6)} ${s}% (${sRemain} / ${sWin})` : '';
-    line = [badge, repoPart, u5, u7].filter(Boolean).join(' | ');
+    const usageLabel = blue('Usage');
+    const u5 = p !== undefined
+      ? `${usageLabel} ${percentColor(p)(bar(p, 8))} ${percentColor(p)(`${p}%`)} (${blue(pRemain)} / ${magenta(pWin)})`
+      : 'Usage --';
+    const u7 = s !== undefined
+      ? `${percentColor(s)(bar(s, 6))} ${percentColor(s)(`${s}%`)} (${blue(sRemain)} / ${magenta(sWin)})`
+      : '';
+    line = [badge, blue(repoPart), u5, u7].filter(Boolean).join(' | ');
   } else if (width >= 105) {
-    const u5 = p !== undefined ? `U5 ${bar(p, 6)} ${p}% (${pRemain})` : 'U5 --';
-    const u7 = s !== undefined ? `U7 ${bar(s, 5)} ${s}% (${sRemain})` : '';
-    line = [badge, repoPart, u5, u7].filter(Boolean).join(' | ');
+    const u5 = p !== undefined
+      ? `U5 ${percentColor(p)(bar(p, 6))} ${percentColor(p)(`${p}%`)} (${blue(pRemain)})`
+      : 'U5 --';
+    const u7 = s !== undefined
+      ? `U7 ${percentColor(s)(bar(s, 5))} ${percentColor(s)(`${s}%`)} (${blue(sRemain)})`
+      : '';
+    line = [badge, magenta(repoPart), u5, u7].filter(Boolean).join(' | ');
   } else {
-    const u5 = p !== undefined ? `U5 ${p}%` : 'U5 --';
-    const u7 = s !== undefined ? `U7 ${s}%` : '';
-    line = [badge, project, u5, u7].filter(Boolean).join(' | ');
+    const u5 = p !== undefined ? `U5 ${percentColor(p)(`${p}%`)}` : 'U5 --';
+    const u7 = s !== undefined ? `U7 ${percentColor(s)(`${s}%`)}` : '';
+    line = [badge, blue(project), u5, u7].filter(Boolean).join(' | ');
   }
 
   return trimToWidth(line, width);

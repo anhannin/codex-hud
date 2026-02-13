@@ -103,23 +103,27 @@ export function renderTmuxLine(snapshot: HudSnapshot): string {
   const model = snapshot.model ?? 'unknown-model';
   const modelShort = model
     .replace(/^gpt-/i, 'g')
+    .replace(/-codex-spark$/i, 's')
     .replace(/-codex$/i, 'c')
     .replace(/\s+/g, '');
-  const parts: string[] = [`${bold(cyan('HUD'))}`, `${bold(blue(modelShort))}`];
+  const parts: string[] = [`HUD`, modelShort];
 
   if (snapshot.ratePrimary) {
     const p = Math.round(snapshot.ratePrimary.usedPercent);
     const pRemain = formatRemaining(snapshot.ratePrimary.resetsAt) || '--';
     const pWin = formatWindow(snapshot.ratePrimary.windowMinutes);
-    let usage = `Usage ${bar(p)} ${percentColor(p)(`${p}%`)} (${pRemain} / ${pWin})`;
+    let usage = `Usage ${bar(p)} ${p}% (${pRemain} / ${pWin})`;
     if (snapshot.rateSecondary) {
       const s = Math.round(snapshot.rateSecondary.usedPercent);
       const sRemain = formatRemaining(snapshot.rateSecondary.resetsAt) || '--';
       const sWin = formatWindow(snapshot.rateSecondary.windowMinutes);
-      usage += ` ${dim('|')} ${bar(s)} ${percentColor(s)(`${s}%`)} (${sRemain} / ${sWin})`;
+      usage += ` | ${bar(s)} ${s}% (${sRemain} / ${sWin})`;
     }
     parts.push(usage);
   }
 
-  return parts.join(` ${dim('•')} `);
+  const plain = parts.join(' • ');
+  const maxLen = 120;
+  if (plain.length <= maxLen) return `${plain}  `;
+  return `${plain.slice(0, maxLen - 1)}… `;
 }

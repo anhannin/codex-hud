@@ -100,39 +100,19 @@ export function render(snapshot: HudSnapshot, config: HudConfig): string[] {
 }
 
 export function renderTmuxLine(snapshot: HudSnapshot): string {
-  const model = snapshot.model ?? 'unknown';
-  const project = snapshot.cwd ? snapshot.cwd.split(/[\\/]/).filter(Boolean).slice(-2).join('/') : 'no-cwd';
-  const git = snapshot.gitBranch ? `${snapshot.gitBranch}${snapshot.gitDirty ? '*' : ''}` : '-';
-  const turn = snapshot.turnState === 'running' ? yellow('RUN') : dim('IDLE');
-  const activeCount = snapshot.activeTools.length;
-  const toolLabel = activeCount > 0
-    ? snapshot.activeTools[snapshot.activeTools.length - 1].label
-    : dim('idle');
-
-  const parts: string[] = [
-    `${bold(cyan('HUD'))}`,
-    `${bold(blue(model))}`,
-    `${magenta(project)}`,
-    `${yellow(`git:${git}`)}`,
-    `${turn}`,
-    `${bold(green('TOOL'))}:${toolLabel}`,
-  ];
-
-  if (snapshot.contextUsedPercent !== undefined) {
-    const ctx = Math.round(snapshot.contextUsedPercent);
-    parts.push(`Ctx ${bar(ctx, 6)} ${percentColor(ctx)(`${ctx}%`)}`);
-  }
+  const model = snapshot.model ?? 'unknown-model';
+  const modelShort = model
+    .replace(/^gpt-/i, 'g')
+    .replace(/-codex$/i, 'c')
+    .replace(/\s+/g, '');
+  const parts: string[] = [`${bold(cyan('HUD'))}`, `${bold(blue(modelShort))}`];
 
   if (snapshot.ratePrimary) {
     const p = Math.round(snapshot.ratePrimary.usedPercent);
-    const pRemaining = formatRemaining(snapshot.ratePrimary.resetsAt) || '--';
-    const pWindow = formatWindow(snapshot.ratePrimary.windowMinutes);
-    let usage = `U5 ${bar(p, 6)} ${percentColor(p)(`${p}%`)}(${pRemaining}/${pWindow})`;
+    let usage = `U5 ${percentColor(p)(`${p}%`)}`;
     if (snapshot.rateSecondary) {
       const s = Math.round(snapshot.rateSecondary.usedPercent);
-      const sRemaining = formatRemaining(snapshot.rateSecondary.resetsAt) || '--';
-      const sWindow = formatWindow(snapshot.rateSecondary.windowMinutes);
-      usage += ` ${dim('|')} U7 ${bar(s, 6)} ${percentColor(s)(`${s}%`)}(${sRemaining}/${sWindow})`;
+      usage += ` ${dim('|')} U7 ${percentColor(s)(`${s}%`)}`;
     }
     parts.push(usage);
   }

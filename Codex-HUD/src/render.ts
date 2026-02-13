@@ -109,7 +109,7 @@ export function renderTmuxLine(snapshot: HudSnapshot): string {
     ? snapshot.activeTools[snapshot.activeTools.length - 1].label
     : dim('idle');
 
-  const line1: string[] = [
+  const parts: string[] = [
     `${bold(cyan('HUD'))}`,
     `${bold(blue(model))}`,
     `${magenta(project)}`,
@@ -118,29 +118,24 @@ export function renderTmuxLine(snapshot: HudSnapshot): string {
     `${bold(green('TOOL'))}:${toolLabel}`,
   ];
 
-  const line2: string[] = [];
   if (snapshot.contextUsedPercent !== undefined) {
     const ctx = Math.round(snapshot.contextUsedPercent);
-    line2.push(`Context ${bar(ctx)} ${percentColor(ctx)(`${ctx}%`)}`);
+    parts.push(`Ctx ${bar(ctx, 6)} ${percentColor(ctx)(`${ctx}%`)}`);
   }
 
   if (snapshot.ratePrimary) {
     const p = Math.round(snapshot.ratePrimary.usedPercent);
     const pRemaining = formatRemaining(snapshot.ratePrimary.resetsAt) || '--';
     const pWindow = formatWindow(snapshot.ratePrimary.windowMinutes);
-    let usage = `Usage ${bar(p)} ${percentColor(p)(`${p}%`)} (${pRemaining} / ${pWindow})`;
+    let usage = `U5 ${bar(p, 6)} ${percentColor(p)(`${p}%`)}(${pRemaining}/${pWindow})`;
     if (snapshot.rateSecondary) {
       const s = Math.round(snapshot.rateSecondary.usedPercent);
       const sRemaining = formatRemaining(snapshot.rateSecondary.resetsAt) || '--';
       const sWindow = formatWindow(snapshot.rateSecondary.windowMinutes);
-      usage += ` ${dim('|')} ${bar(s)} ${percentColor(s)(`${s}%`)} (${sRemaining} / ${sWindow})`;
+      usage += ` ${dim('|')} U7 ${bar(s, 6)} ${percentColor(s)(`${s}%`)}(${sRemaining}/${sWindow})`;
     }
-    line2.push(usage);
+    parts.push(usage);
   }
 
-  const first = line1.join(` ${dim('•')} `);
-  if (line2.length === 0) {
-    return first;
-  }
-  return `${first}\n${line2.join(` ${dim('│')} `)}`;
+  return parts.join(` ${dim('•')} `);
 }

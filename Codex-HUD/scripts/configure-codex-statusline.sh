@@ -38,9 +38,16 @@ if [[ ! -f "$CONFIG_PATH" ]]; then
 fi
 
 STATUS_LINE='status_line = []'
-ESCAPED_REPO="${REPO_DIR//\\/\\\\}"
-ESCAPED_REPO="${ESCAPED_REPO//\"/\\\"}"
-STATUS_CMD="status_line_command = \"cd \\\"${ESCAPED_REPO}\\\" && node dist/index.js --status-line --once --no-clear\""
+
+shell_quote() {
+  local value="$1"
+  printf "'%s'" "${value//\'/\'\\\'\'}"
+}
+
+STATUS_COMMAND="cd $(shell_quote "$REPO_DIR") && node dist/index.js --status-line --once --no-clear"
+ESCAPED_STATUS_COMMAND="${STATUS_COMMAND//\\/\\\\}"
+ESCAPED_STATUS_COMMAND="${ESCAPED_STATUS_COMMAND//\"/\\\"}"
+STATUS_CMD="status_line_command = \"${ESCAPED_STATUS_COMMAND}\""
 
 TMP_FILE="$(mktemp)"
 trap 'rm -f "$TMP_FILE"' EXIT
